@@ -21,10 +21,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.eclipse.reddeer.common.condition.WaitCondition;
 import org.eclipse.reddeer.common.wait.AbstractWait;
 import org.eclipse.reddeer.common.wait.TimePeriod;
-import org.eclipse.reddeer.common.wait.WaitUntil;
 import org.eclipse.reddeer.common.wait.WaitWhile;
 import org.eclipse.reddeer.direct.preferences.PreferencesUtil;
 import org.eclipse.reddeer.eclipse.ui.navigator.resources.ProjectExplorer;
@@ -35,16 +33,13 @@ import org.eclipse.reddeer.swt.api.Shell;
 import org.eclipse.reddeer.swt.condition.ShellIsAvailable;
 import org.eclipse.reddeer.swt.impl.button.CheckBox;
 import org.eclipse.reddeer.swt.impl.button.FinishButton;
-import org.eclipse.reddeer.swt.impl.button.OkButton;
 import org.eclipse.reddeer.swt.impl.button.PushButton;
 import org.eclipse.reddeer.swt.impl.menu.ContextMenuItem;
 import org.eclipse.reddeer.swt.impl.shell.DefaultShell;
 import org.eclipse.reddeer.workbench.core.condition.JobIsRunning;
 import org.eclipse.reddeer.workbench.impl.shell.WorkbenchShell;
-import org.eclipse.reddeer.workbench.ui.dialogs.WorkbenchPreferenceDialog;
 import org.jboss.tools.fuse.reddeer.ProjectType;
 import org.jboss.tools.fuse.reddeer.SupportedCamelVersions;
-import org.jboss.tools.fuse.reddeer.preference.InstalledJREs;
 import org.jboss.tools.fuse.reddeer.wizard.NewFuseIntegrationProjectWizard;
 import org.jboss.tools.fuse.reddeer.wizard.NewFuseIntegrationProjectWizardAdvancedPage;
 import org.jboss.tools.fuse.reddeer.wizard.NewFuseIntegrationProjectWizardDeploymentType;
@@ -58,9 +53,7 @@ import org.jboss.tools.fuse.reddeer.wizard.NewFuseIntegrationProjectWizardRuntim
  * @author tsedmik
  */
 public class ProjectFactory {
-	
-	public static final String JDK_WARNING_MESSAGE = "No Strictly compliant JRE detected";
-	
+		
 	private String name;
 	private String version;
 	private NewFuseIntegrationProjectWizardRuntimeType runtimeType;
@@ -93,7 +86,7 @@ public class ProjectFactory {
 
 	public void create() {
 		PreferencesUtil.setOpenAssociatedPerspective("never");
-		boolean hasJava8 = hasJava8Available();
+		boolean hasJava8 = JDK8Check.isJava8Available();
 		NewFuseIntegrationProjectWizard wiz = new NewFuseIntegrationProjectWizard();
 		wiz.open();
 		NewFuseIntegrationProjectWizardFirstPage firstPage = new NewFuseIntegrationProjectWizardFirstPage(wiz);
@@ -124,12 +117,7 @@ public class ProjectFactory {
 		new FinishButton(wiz).click();
 				
 		if(!hasJava8) {
-			DefaultShell warningMessage = new DefaultShell(JDK_WARNING_MESSAGE);
-			WaitCondition wait = new ShellIsAvailable(warningMessage);
-			new WaitUntil(wait, TimePeriod.getCustom(900), false);
-			if (wait.getResult() != null) {
-				new OkButton(warningMessage).click();
-			}
+			JDK8Check.handleMissingJava8();
 		}
 		
 		new WaitWhile(new JobIsRunning(), TimePeriod.LONG);
@@ -266,15 +254,5 @@ public class ProjectFactory {
 		}
 		wiz.cancel();
 		return templates;
-	}
-	
-	private boolean hasJava8Available() {
-		WorkbenchPreferenceDialog prefs = new WorkbenchPreferenceDialog();
-		InstalledJREs jres = new InstalledJREs(prefs); 
-		prefs.open();
-		prefs.select(jres);
-		boolean hasJava8 = jres.containsJreWithName(".*(jdk8|jdk-1.8|1.8.0).*");
-		prefs.ok();	
-		return hasJava8;
 	}
 }
